@@ -4,7 +4,8 @@ import (
 	"context"
 	"dailies-go/db"
 	"dailies-go/views/models"
-	"fmt"
+	"slices"
+	"time"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -45,21 +46,17 @@ type HomeView struct {
 // NewHomeView Constructor
 func NewHomeView(database *db.Queries, context context.Context) HomeView {
 
-	// Initialize entries from db
-	entries, err := database.GetEntriesByDateRange(context, db.GetEntriesByDateRangeParams{
-		DateStart: "2024-01-01",
-		DateEnd:   "2024-12-31",
-	})
-	// TODO: Handle database read errors
-	_ = err
-	// Convert into list format
-	entryListItems := make([]list.Item, len(entries))
-	for i := range entries {
-		entryListItems[i] = entries[i]
+	// Initializt entry list by showing recent dates (past month)
+	dates := getRecentDates(database, context)
+	// Convert slice to []list.Item
+	datesList := make([]list.Item, len(dates))
+	for i, date := range dates {
+		datesList[i] = date
 	}
+
 	// We use default item delegate (item rendering style) here
 	// but we customize the height depending on the view width during update cycle
-	listView := list.New(entryListItems, models.NewItemDelegate(0), 0, 0)
+	listView := list.New(datesList, models.NewItemDelegate(0), 0, 0)
 	listView.SetShowHelp(false)
 	listView.SetShowTitle(false)
 	listView.SetFilteringEnabled(false)
@@ -95,6 +92,42 @@ func NewHomeView(database *db.Queries, context context.Context) HomeView {
 		entriesList: listView,
 		randomEntry: randomEntryPtr,
 	}
+}
+
+func getRecentDates(database *db.Queries, context context.Context) []models.Day {
+
+	var days []models.Day
+
+	now := time.Now()
+	enddate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	startDate := enddate.AddDate(0, 0, -30)
+
+	// Fetch relevant entries from the database
+	entries, err := database.GetEntriesByDateRange(context, db.GetEntriesByDateRangeParams{
+		DateStart: startDate.Format("2006-01-02"),
+		DateEnd:   enddate.Format("2006-01-02"),
+	})
+	if err != nil {
+		panic("Failed to fetch entries")
+	}
+
+	// Iterate through the past 30 days
+	for i := 0; i < 30; i++ {
+		// Subtract i days
+		pastDate := enddate.AddDate(0, 0, -i)
+
+		// Check if the entry exists for this date
+		matchingEntryIndex := slices.IndexFunc(entries, func(entry db.Entry) bool {
+			return entry.Date[0:10] == pastDate.Format("2006-01-02")
+		})
+		if matchingEntryIndex != -1 {
+			days = append(days, models.NewDay(pastDate, &entries[matchingEntryIndex]))
+		} else {
+			days = append(days, models.NewDay(pastDate, nil))
+		}
+	}
+
+	return days
 }
 
 func (v HomeView) Init() tea.Cmd {
@@ -175,8 +208,8 @@ func (v HomeView) getSidebarContent() string {
 	contentStyle := lipgloss.NewStyle().Italic(true).Width(sidebarContentWidth)
 
 	if v.randomEntry != nil {
-		title := headerStyle.Render(fmt.Sprintf("%s...", v.randomEntry.GetRelativeDateString()))
-		content := contentStyle.Render(v.randomEntry.Content)
+		title := headerStyle.Render(v.randomEntry.Title())
+		content := contentStyle.Render(v.randomEntry.Content.String)
 		return lipgloss.JoinVertical(lipgloss.Left, title, "", content)
 	} else {
 		return "Time waits for no one..."
