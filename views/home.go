@@ -39,7 +39,6 @@ type HomeView struct {
 
 	// Data
 	List        list.Model
-	entries     []db.Entry
 	randomEntry *db.Entry
 }
 
@@ -93,7 +92,6 @@ func NewHomeView(database *db.Queries, context context.Context) HomeView {
 		mainAreaStyle: defaultBorderStyle,
 		sidebarStyle:  defaultBorderStyle,
 
-		entries:     entries,
 		List:        listView,
 		randomEntry: randomEntryPtr,
 	}
