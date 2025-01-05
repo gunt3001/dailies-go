@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS Entries (
     Date TEXT NOT NULL CONSTRAINT "PK_Entries" PRIMARY KEY,
-    Content TEXT NOT NULL,
-    Keyword TEXT NULL,
-    Mood TEXT NULL,
-    Remarks TEXT NULL
+    Content TEXT,
+    Keyword TEXT,
+    Mood TEXT,
+    Remarks TEXT
 );

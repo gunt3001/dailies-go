@@ -4,10 +4,14 @@
 
 package db
 
+import (
+	"database/sql"
+)
+
 type Entry struct {
 	Date    string
-	Content string
-	Keyword interface{}
-	Mood    interface{}
-	Remarks interface{}
+	Content sql.NullString
+	Keyword sql.NullString
+	Mood    sql.NullString
+	Remarks sql.NullString
 }
