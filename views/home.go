@@ -4,6 +4,7 @@ import (
 	"context"
 	"dailies-go/db"
 	"dailies-go/views/models"
+	"fmt"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -19,7 +20,8 @@ const (
 
 // Struct to handle key bindings
 type homeViewKeymap struct {
-	quit key.Binding
+	quit   key.Binding
+	reroll key.Binding
 }
 
 // HomeView - Primary view for the application
@@ -36,8 +38,9 @@ type HomeView struct {
 	sidebarStyle  lipgloss.Style
 
 	// Data
-	List    list.Model
-	entries []db.Entry
+	List        list.Model
+	entries     []db.Entry
+	randomEntry *db.Entry
 }
 
 // NewHomeView Constructor
@@ -64,6 +67,9 @@ func NewHomeView(database *db.Queries, context context.Context) HomeView {
 	listView.SetStatusBarItemName("entry", "entries")
 	listView.DisableQuitKeybindings()
 
+	// Sidebar content
+	randomEntryPtr := getNewRandomEntry(database, context)
+
 	defaultBorderStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder())
 	return HomeView{
 		width:        0,
@@ -75,6 +81,10 @@ func NewHomeView(database *db.Queries, context context.Context) HomeView {
 				key.WithKeys("q"),
 				key.WithHelp("q", "Quit"),
 			),
+			reroll: key.NewBinding(
+				key.WithKeys("r"),
+				key.WithHelp("r", "Reroll random entry"),
+			),
 		},
 		database:  database,
 		dbContext: context,
@@ -83,8 +93,9 @@ func NewHomeView(database *db.Queries, context context.Context) HomeView {
 		mainAreaStyle: defaultBorderStyle,
 		sidebarStyle:  defaultBorderStyle,
 
-		entries: entries,
-		List:    listView,
+		entries:     entries,
+		List:        listView,
+		randomEntry: randomEntryPtr,
 	}
 }
 
@@ -127,6 +138,10 @@ func (v HomeView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// q to quit
 		case key.Matches(msg, v.keymap.quit):
 			return v, tea.Quit
+		// r to reroll random entry
+		case key.Matches(msg, v.keymap.reroll):
+			v.randomEntry = getNewRandomEntry(v.database, v.dbContext)
+			return v, nil
 		}
 	}
 
@@ -144,7 +159,7 @@ func (v HomeView) View() string {
 
 	mainAreaView := lipgloss.JoinHorizontal(lipgloss.Top,
 		v.mainAreaStyle.Render(v.List.View()),
-		v.sidebarStyle.Render("Sidebar content"))
+		v.sidebarStyle.Render(v.getSidebarContent()))
 
 	ui := lipgloss.JoinVertical(lipgloss.Left,
 		mainAreaView,
@@ -153,4 +168,29 @@ func (v HomeView) View() string {
 
 	// Return the UI for rendering
 	return ui
+}
+
+func (v HomeView) getSidebarContent() string {
+
+	sidebarContentWidth := v.sidebarWidth - v.sidebarStyle.GetBorderLeftSize() - v.sidebarStyle.GetBorderRightSize()
+	headerStyle := lipgloss.NewStyle().Bold(true).Width(sidebarContentWidth)
+	contentStyle := lipgloss.NewStyle().Italic(true).Width(sidebarContentWidth)
+
+	if v.randomEntry != nil {
+		title := headerStyle.Render(fmt.Sprintf("%s...", v.randomEntry.GetRelativeDateString()))
+		content := contentStyle.Render(v.randomEntry.Content)
+		return lipgloss.JoinVertical(lipgloss.Left, title, "", content)
+	} else {
+		return "Time waits for no one..."
+	}
+
+}
+
+func getNewRandomEntry(database *db.Queries, context context.Context) *db.Entry {
+	randomEntry, err := database.GetRandomEntry(context)
+	var randomEntryPtr *db.Entry
+	if err == nil {
+		randomEntryPtr = &randomEntry
+	}
+	return randomEntryPtr
 }

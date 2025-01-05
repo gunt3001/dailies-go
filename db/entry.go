@@ -16,7 +16,7 @@ func (e Entry) Title() string {
 		return "Invalid entry date"
 	}
 	dateString := date.Format("2 Jan '06")
-	return fmt.Sprintf("%s (%s) - %s", dateString, e.getRelativeDateString(), e.Keyword)
+	return fmt.Sprintf("%s (%s) - %s", dateString, e.GetRelativeDateString(), e.Keyword)
 }
 
 func (e Entry) Description() string {
@@ -27,7 +27,7 @@ func (e Entry) getEntryDateAsTime() (time.Time, error) {
 	return time.Parse("2006-01-02 15:04:05", e.Date)
 }
 
-func (e Entry) getRelativeDateString() string {
+func (e Entry) GetRelativeDateString() string {
 	date, err := e.getEntryDateAsTime()
 	if err != nil {
 		return "?"
