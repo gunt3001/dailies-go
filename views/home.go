@@ -38,7 +38,7 @@ type HomeView struct {
 	sidebarStyle  lipgloss.Style
 
 	// Data
-	List        list.Model
+	entriesList list.Model
 	randomEntry *db.Entry
 }
 
@@ -92,7 +92,7 @@ func NewHomeView(database *db.Queries, context context.Context) HomeView {
 		mainAreaStyle: defaultBorderStyle,
 		sidebarStyle:  defaultBorderStyle,
 
-		List:        listView,
+		entriesList: listView,
 		randomEntry: randomEntryPtr,
 	}
 }
@@ -126,9 +126,9 @@ func (v HomeView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Width(v.sidebarWidth - borderSizeX).
 			Height(v.height - borderSizeY)
 		// Update list size (fill main area)
-		v.List.SetSize(v.mainAreaStyle.GetWidth(), v.mainAreaStyle.GetHeight())
+		v.entriesList.SetSize(v.mainAreaStyle.GetWidth(), v.mainAreaStyle.GetHeight())
 		// Update list item size
-		v.List.SetDelegate(models.NewItemDelegate(mainAreaWidth))
+		v.entriesList.SetDelegate(models.NewItemDelegate(mainAreaWidth))
 
 	// On keypress
 	case tea.KeyMsg:
@@ -145,7 +145,7 @@ func (v HomeView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Update child list view
 	var listCmd tea.Cmd
-	v.List, listCmd = v.List.Update(msg)
+	v.entriesList, listCmd = v.entriesList.Update(msg)
 
 	// Return the updated model and no command
 	return v, listCmd
@@ -153,10 +153,10 @@ func (v HomeView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (v HomeView) View() string {
 
-	helpView := v.help.ShortHelpView(append(v.List.ShortHelp(), v.keymap.quit))
+	helpView := v.help.ShortHelpView(append(v.entriesList.ShortHelp(), v.keymap.quit))
 
 	mainAreaView := lipgloss.JoinHorizontal(lipgloss.Top,
-		v.mainAreaStyle.Render(v.List.View()),
+		v.mainAreaStyle.Render(v.entriesList.View()),
 		v.sidebarStyle.Render(v.getSidebarContent()))
 
 	ui := lipgloss.JoinVertical(lipgloss.Left,
