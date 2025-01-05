@@ -49,3 +49,27 @@ func (q *Queries) GetEntriesByDateRange(ctx context.Context, arg GetEntriesByDat
 	}
 	return items, nil
 }
+
+const getRandomEntry = `-- name: GetRandomEntry :one
+SELECT date, content, keyword, mood, remarks
+FROM Entries
+WHERE Date IN (
+    SELECT Date 
+    FROM Entries 
+    WHERE Content IS NOT NULL AND Remarks != ''
+    ORDER BY RANDOM() LIMIT 1
+)
+`
+
+func (q *Queries) GetRandomEntry(ctx context.Context) (Entry, error) {
+	row := q.db.QueryRowContext(ctx, getRandomEntry)
+	var i Entry
+	err := row.Scan(
+		&i.Date,
+		&i.Content,
+		&i.Keyword,
+		&i.Mood,
+		&i.Remarks,
+	)
+	return i, err
+}
